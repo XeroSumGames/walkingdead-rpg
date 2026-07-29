@@ -2558,6 +2558,7 @@ function rDossier() {
   h += '</div></div>';
 
   h += '<div class="btn-row no-print"><button class="btn ghost" data-act="randomizeAll">Randomize all</button>' +
+    '<button class="btn ghost" data-act="downloadPdf">Download editable PDF</button>' +
     '<button class="btn" data-act="print">Print to official sheet</button></div>';
   return h;
 }
@@ -2701,6 +2702,128 @@ function buildSheet() {
   h += '</div>';
   host.innerHTML = h;
 }
+
+/* ---------- editable (fillable) PDF ----------
+   Emits a real AcroForm PDF: the official sheet as the page background with
+   editable text fields laid over it at the same calibrated positions buildSheet
+   uses. Players save the file and later reopen it in any PDF reader to change a
+   value (e.g. a 2 to a 3). Field coords are % of the letter page (612x792 pt). */
+function dataURItoBytes(uri) {
+  var b64 = uri.split(",")[1], bin = atob(b64), arr = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+function pdfAscii(s) {
+  return String(s == null ? "" : s)
+    .replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
+    .replace(/[–—]/g, "-").replace(/…/g, "...");
+}
+// Load pdf-lib on demand from the generator's own canonical host, so it works
+// whether the page is viewed directly or through a proxy (thetable / thetapestry).
+function ensurePdfLib() {
+  return new Promise(function (res, rej) {
+    if (window.PDFLib) return res();
+    var s = document.createElement("script");
+    s.src = "https://walkingdead-rpg.vercel.app/pdf-lib.min.js";
+    s.onload = function () { window.PDFLib ? res() : rej(new Error("PDF library loaded but unavailable")); };
+    s.onerror = function () { rej(new Error("Couldn't load the PDF library")); };
+    document.head.appendChild(s);
+  });
+}
+async function generatePDF() {
+  var a = arch(); if (!a) { alert("Finish your survivor first."); return; }
+  await ensurePdfLib();
+  var L = window.PDFLib, W = 612, H = 792;
+  var doc = await L.PDFDocument.create();
+  var font = await doc.embedFont(L.StandardFonts.Helvetica);
+  var fontB = await doc.embedFont(L.StandardFonts.HelveticaBold);
+  var jpg = await doc.embedJpg(dataURItoBytes(window.SHEET_P1));
+  var page = doc.addPage([W, H]);
+  page.drawImage(jpg, { x: 0, y: 0, width: W, height: H });
+  var form = doc.getForm(), idx = 0;
+  // xPct,yTopPct = top-left; wPct,hPct = size (all % of the page)
+  function mkText(xPct, yTopPct, wPct, hPct, value, o) {
+    o = o || {};
+    var x = xPct / 100 * W, w = wPct / 100 * W, hh = hPct / 100 * H;
+    var y = H - (yTopPct / 100 * H) - hh;
+    var tf = form.createTextField("f_" + (idx++));
+    if (o.multiline) tf.enableMultiline();
+    try { tf.setFontSize(o.size || 9); } catch (e) {}
+    tf.setText(pdfAscii(value));
+    if (o.align === "center") { try { tf.setAlignment(L.TextAlignment.Center); } catch (e) {} }
+    tf.addToPage(page, { x: x, y: y, width: w, height: hh, borderWidth: 0,
+      textColor: L.rgb(0.09, 0.09, 0.11), font: o.bold ? fontB : font });
+    return tf;
+  }
+  function mkC(cxPct, cyPct, wPct, hPct, value, o) { // centred on (cx,cy)
+    o = o || {}; o.align = "center";
+    return mkText(cxPct - wPct / 2, cyPct - hPct / 2, wPct, hPct, value, o);
+  }
+  function mkL(xPct, cyPct, wPct, value, o) { // left, vertically centred on cy
+    o = o || {}; var hh = o.h || 2.6;
+    return mkText(xPct, cyPct - hh / 2, wPct, hh, value, o);
+  }
+  // header
+  mkL(42.0, 4.6, 55, S.name, { size: 12, bold: true });
+  mkL(42.0, 7.3, 55, a.name, { size: 11 });
+  mkText(41.5, 9.0, 50, 9.5, S.description || "", { size: 9, multiline: true });
+  mkL(15.5, 20.8, 25, S.pcAnchor, { size: 9 });
+  mkL(16.5, 23.5, 24, S.npcAnchor, { size: 9 });
+  mkL(48.5, 20.8, 44, S.drive, { size: 9 });
+  mkL(49.5, 23.5, 43, S.issue, { size: 9 });
+  mkText(6.5, 25.8, 34, 6.5, S.relationships || "", { size: 9, multiline: true });
+  // attributes + skills (every box editable, including zeros so they can be raised)
+  var colX = [6.3, 28.9, 51.8, 75.5], rowY = [37.4, 40.0, 42.6, 45.2];
+  ATTRS.forEach(function (at, ci) {
+    mkC(colX[ci], rowY[0], 4.4, 2.4, String(S.attrs[at]), { size: 11, bold: true });
+    SKMAP[at].forEach(function (s, ri) {
+      var v = S.skills[s];
+      mkC(colX[ci], rowY[ri + 1], 4.4, 2.4, v ? String(v) : "", { size: 11, bold: true });
+    });
+  });
+  // talent
+  var t = talentByName(S.talent);
+  mkL(6.5, 50.5, 28, t.name, { size: 10, bold: true });
+  mkText(6.5, 52.0, 27, 8, t.desc || "", { size: 8, multiline: true });
+  // stress / xp / encumbrance
+  mkC(93.3, 48.9, 5.5, 2.4, "0", { size: 10 });
+  mkC(93.3, 51.9, 5.5, 2.4, "0", { size: 10 });
+  mkC(93.3, 54.0, 5.5, 2.4, String(encumbrance()), { size: 10 });
+  // gear: fill actual items, then blank slots down the column (~10 rows) to fill over time
+  var gitems = S.gear.slice();
+  if (S.scav) gitems.push(S.scav.item + " (scavenged)");
+  var gy = 60.6;
+  for (var gi = 0; gi < 10; gi++) { mkL(56.0, gy, 33, gitems[gi] || "", { size: 9 }); gy += 2.5; }
+  // weapons: matched + blank rows
+  var mw = matchedWeapons(), wy = 73.2;
+  for (var wi = 0; wi < 4; wi++) {
+    var w = mw[wi];
+    mkL(6.5, wy + 0.4, 30, w ? w.name : "", { size: 9 });
+    mkC(39.5, wy + 0.8, 6, 2.2, w ? w.damage : "", { size: 9 });
+    mkC(49.0, wy + 0.8, 6, 2.2, w ? w.bonus : "", { size: 9 });
+    mkC(59.5, wy + 0.8, 8, 2.2, w ? (w.range || "-") : "", { size: 9 });
+    wy += 2.9;
+  }
+  // stored gear (haven + scar)
+  mkL(6.5, 90.5, 40, "Haven: " + S.haven.name + " (Cap " + S.haven.capacity + " / Def " + S.haven.defense + ")", { size: 9 });
+  if (S.scar) mkL(6.5, 93.1, 40, "Scar: " + S.scar.name, { size: 9 });
+  // portrait (baked in, not a field)
+  if (S.portrait) {
+    try {
+      var pb = dataURItoBytes(S.portrait);
+      var pimg = S.portrait.indexOf("image/png") >= 0 ? await doc.embedPng(pb) : await doc.embedJpg(pb);
+      var pw = 0.18 * W, ph = 0.14 * H, px = 0.78 * W, py = H - 0.82 * H - ph;
+      page.drawImage(pimg, { x: px, y: py, width: pw, height: ph });
+    } catch (e) {}
+  }
+  var bytes = await doc.save();
+  var blob = new Blob([bytes], { type: "application/pdf" });
+  var url = URL.createObjectURL(blob), aEl = document.createElement("a");
+  aEl.href = url; aEl.download = "TWD-" + (S.name || "character").replace(/[^a-z0-9]+/gi, "-") + ".pdf";
+  document.body.appendChild(aEl); aEl.click();
+  setTimeout(function () { URL.revokeObjectURL(url); aEl.remove(); }, 1500);
+}
+
 function words(s) { return String(s).toLowerCase().split(/[^a-z]+/).filter(function (w) { return w.length >= 3; }); }
 function matchedWeapons() {
   var out = [], seen = {};
@@ -2816,6 +2939,12 @@ var ACT = {
   randSkill: function () { randSkill(); render(); },
   randomizeAll: function () { randomizeAll(); buildSheet(); render(); },
   print: function () { buildSheet(); window.print(); },
+  downloadPdf: function (e, t) {
+    var btn = t; var old = btn ? btn.textContent : "";
+    if (btn) { btn.textContent = "Building PDF..."; btn.disabled = true; }
+    generatePDF().catch(function (err) { console.error(err); alert("Sorry, the PDF couldn't be built: " + (err && err.message || err)); })
+      .then(function () { if (btn) { btn.textContent = old; btn.disabled = false; } });
+  },
   portrait: function (e, t) {
     var f = t.files && t.files[0]; if (!f) return;
     var rd = new FileReader(); rd.onload = function () { S.portrait = rd.result; buildSheet(); render(); }; rd.readAsDataURL(f);
