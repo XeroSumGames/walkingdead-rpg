@@ -65,64 +65,21 @@ body{
 a{color:var(--red2)}
 
 /* ---- header ---- */
-.hdr{
-  position:relative;
-  padding:22px 18px 14px;
-  border-bottom:3px solid var(--red);
-  background:linear-gradient(180deg,var(--bg2),var(--bg));
-  overflow:hidden;
-}
-.hdr-inner{max-width:960px;margin:0 auto;position:relative}
-.hdr-kicker{
-  font-family:var(--cond);
-  text-transform:uppercase;
-  letter-spacing:.32em;
-  font-size:12px;
-  font-weight:700;
-  color:var(--muted);
-  margin:0 0 2px;
-}
-.hdr-title{
-  font-family:var(--cond);
-  text-transform:uppercase;
-  letter-spacing:.02em;
-  font-weight:800;
-  font-size:40px;
-  line-height:.94;
-  margin:0;
-  color:var(--ink);
-  pointer-events:none; /* never eat clicks meant for floating controls */
-}
-.hdr-title b{color:var(--red2)}
-.hdr-sub{
-  margin:6px 0 0;
-  font-size:13px;
-  color:var(--muted);
-  font-family:var(--sans);
-  pointer-events:none;
-}
-/* theme toggle - floats top-right, ABOVE the title (learned bug) */
-.theme-toggle{
-  position:absolute;
-  top:2px;right:0;
-  z-index:20;                 /* must beat .hdr-title */
-  display:flex;gap:0;
-  border:1px solid var(--line);
-  border-radius:6px;
-  overflow:hidden;
-  background:var(--panel);
-}
-.tt-btn{
-  font-family:var(--cond);
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  font-size:12px;
-  font-weight:700;
-  padding:6px 11px;
-  border:0;background:transparent;color:var(--muted);
-  cursor:pointer;
-}
+/* ==== UNIFORM TITLE BAR (shared spec across all Xero Sum Games generators:
+   back-to-Table strip, LIGHT/DARK pill left, centered title+sub, RANDOMISE
+   right, 3px accent underline. Only the palette differs per generator). ==== */
+.backbar{display:block;background:#0e0e10;color:#e8e5dd;font:600 14px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;text-decoration:none;padding:9px 14px;border-bottom:1px solid #2a2a30}
+.backbar:hover{color:#fff}
+.hdr{position:relative;padding:16px 24px;border-bottom:3px solid var(--red);background:linear-gradient(180deg,var(--bg2),var(--bg));text-align:center;overflow:hidden}
+.theme-toggle{position:absolute;left:18px;top:50%;transform:translateY(-50%);display:inline-flex;border:1px solid var(--red);border-radius:20px;overflow:hidden;background:var(--panel);z-index:20}
+.tt-btn{font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em;font-size:12px;font-weight:700;padding:7px 13px;border:0;background:transparent;color:var(--muted);cursor:pointer}
 .tt-btn[aria-pressed="true"]{background:var(--red);color:#f3ece0}
+.hdr-title{font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em;font-weight:800;font-size:30px;line-height:1;margin:0;color:var(--ink);position:relative;pointer-events:none}
+.hdr-title b{color:var(--red2)}
+.hdr-sub{font-family:var(--sans);text-transform:uppercase;letter-spacing:.2em;font-size:12px;color:var(--muted);margin:7px 0 0;position:relative;pointer-events:none}
+.hdr-rand{position:absolute;right:18px;top:50%;transform:translateY(-50%);background:var(--red);border:0;border-radius:6px;color:#f3ece0;font-family:var(--cond);text-transform:uppercase;letter-spacing:.1em;font-size:12px;font-weight:700;padding:9px 16px;cursor:pointer;z-index:20}
+.hdr-rand:hover{background:var(--red2)}
+@media(max-width:720px){.theme-toggle,.hdr-rand{position:static;transform:none;display:inline-flex;margin:12px 6px 0}.hdr-title{font-size:24px}}
 
 /* ---- layout ---- */
 .wrap{max-width:960px;margin:0 auto;padding:16px 18px 60px}
@@ -333,12 +290,13 @@ input[type=text]:focus,textarea:focus,select:focus{outline:2px solid var(--red2)
 }
 </style>
 </head><body>
-<header class="hdr"><div class="hdr-inner">
+<a class="backbar no-print" href="https://thetable.xerosumgames.com/">&larr; The Table</a>
+<header class="hdr">
 <div class="theme-toggle" role="group" aria-label="Theme"><button class="tt-btn" data-tv="light" aria-pressed="true">Light</button><button class="tt-btn" data-tv="dark" aria-pressed="false">Dark</button></div>
-<p class="hdr-kicker">Year Zero Engine // Survivor Dossier</p>
 <h1 class="hdr-title">THE WALKING <b>DEAD</b> UNIVERSE</h1>
-<p class="hdr-sub">Unofficial character generator - build a survivor, print onto the official sheet.</p>
-</div></header>
+<p class="hdr-sub">Year Zero Engine - Character Generator</p>
+<button class="hdr-rand no-print" type="button" data-act="randomizeAll">Randomise</button>
+</header>
 <main class="wrap"><ul class="track" id="track"></ul><div id="main"></div></main>
 <div id="printsheet"></div>
 <footer class="foot no-print"><p>The Walking Dead Universe Roleplaying Game (C) 2023 Fria Ligan AB (Free League Publishing). The Walking Dead Universe (C) 2023 AMC Film Holdings LLC. All Rights Reserved. This is an unofficial, fan-made character creation tool. It is not affiliated with, endorsed, sponsored, or approved by Free League Publishing / Fria Ligan AB, AMC Networks, Genuine Entertainment, or any associated party. No copyright or trademark infringement is intended. All game mechanics and text quoted are the property of their respective owners.</p><p style="margin-top:8px">Made by <b>Xero Sum Games</b> as a free fan tool. Character creation follows the rules in the core rulebook; verify against the book for play.</p></footer>
