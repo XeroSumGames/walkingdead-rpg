@@ -2,7 +2,7 @@
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Walking Dead Universe RPG - Character Generator</title>
+<title>The Walking Dead RPG - Character Generator</title>
 <meta name="description" content="An unofficial fan-made character generator for The Walking Dead Universe Roleplaying Game (Year Zero Engine).">
 <script>(function(){try{var t=localStorage.getItem('walkingdead-rpg_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 <style>/* ==== The Walking Dead Universe - Character Generator ==== */
@@ -293,7 +293,7 @@ input[type=text]:focus,textarea:focus,select:focus{outline:2px solid var(--red2)
 <a class="backbar no-print" href="https://thetable.xerosumgames.com/">&larr; The Table</a>
 <header class="hdr">
 <div class="theme-toggle" role="group" aria-label="Theme"><button class="tt-btn" data-tv="light" aria-pressed="true">Light</button><button class="tt-btn" data-tv="dark" aria-pressed="false">Dark</button></div>
-<h1 class="hdr-title">THE WALKING <b>DEAD</b> UNIVERSE</h1>
+<h1 class="hdr-title">THE WALKING <b>DEAD</b> RPG</h1>
 <p class="hdr-sub">Year Zero Engine - Character Generator</p>
 <button class="hdr-rand no-print" type="button" data-act="randomizeAll">Randomise</button>
 </header>
@@ -2840,7 +2840,7 @@ function init() {
   var saved = "light";
   try { saved = localStorage.getItem("walkingdead-rpg_theme") || "light"; } catch (e) {}
   setTheme(saved === "dark" ? "dark" : "light");
-  Object.keys(ACT).forEach(function (act) { on('[data-act="' + act + '"]', "click", ACT[act]); });
+  Object.keys(ACT).forEach(function (act) { on('[data-act="' + act + '"]', act === "portrait" ? "change" : "click", ACT[act]); });
   on('.tt-btn', "click", function (e, t) { setTheme(t.getAttribute("data-tv")); });
   wireInputs();
   render();
